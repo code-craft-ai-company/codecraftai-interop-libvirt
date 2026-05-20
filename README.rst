@@ -1,50 +1,65 @@
-=======================
-python-package-template
-=======================
-This is a template repository that can be used to quickly create a python package project.
+=========================================
+Automation Mojo Interop - libvirt / KVM
+=========================================
 
-=========================
-Features of this Template
-=========================
-* Machine Setup
-* Virtual Environment Setup (Poetry)
-* PyPi Publishing
+The ``automojo-interop-libvirt`` package is the venue-specific client for libvirt-managed
+hypervisors (KVM/QEMU primarily, with Xen, LXC, and VirtualBox reachable through the same
+binding). libvirt's wire protocol is a custom binary RPC accessed through the official
+``libvirt-python`` bindings, so ``RestClientBase`` does not apply — this package is the
+canonical example of the "native bindings only when the protocol has no other option"
+branch of the cross-cutting usability commitments.
 
-========================
-How to Use This Template
-========================
-- Click the 'Use this template' button
-- Fill in the information to create your repository
-- Checkout your new repository
-- Change the following in 'repository-config.ini'
-
-  #. 'PROJECT NAME'
-  #. 'REPOSITORY_NAME'
-
-- If you have machine dependencies to add, put them in 'setup-ubuntu-machine'
-- Modify the pyproject.toml file with the correct package-name, author, publishing information, etc.
-- Rename the VSCODE workspace file 'mv workspaces/default-workspace.template workspaces/(project name).template'
-- Replace the README.rst file with your own README
-- Update the LICENSE.txt file with your copyright information and license.
-- Add your dependencies with python poetry 'poetry add (dependency name)'
-- Drop your package code in 'source/packages'
-- Modify the name of your package root in 'pyproject.toml'
-
-  #. 'packages = [{include="(root folder name)", from="source/packages"}]'
-
-=================
-Code Organization
-=================
-* .vscode - Common tasks
-* development - This is where the runtime environment scripts are located
-* repository-setup - Scripts for homing your repository and to your checkout and machine setup
-* userguide - Where you put your user guide
-* source/packages - Put your root folder here 'source/packages/(root-module-folder)'
-* workspaces - This is where you add VSCode workspaces templates and where workspaces show up when homed.
-
-==========
-References
+Highlights
 ==========
 
-- `User Guide <userguide/userguide.rst>`
-- `Coding Standards <userguide/10-00-coding-standards.rst>`
+- ``LibvirtClient`` — the venue client speaking libvirt-native RPC; connection lifecycle plus host capability and node-info queries.
+- Network and storage management — NAT/bridged/isolated networks, storage pools, and volumes.
+- Domain lifecycle — define/create/start/shutdown/destroy/undefine, domain XML templating with safe parameterisation, and disk/NIC attach-detach.
+- Snapshots and task handles — snapshot management and a typed ``LibvirtTaskHandle`` for the few genuinely asynchronous libvirt operations.
+- Aspects-driven transport — authentication uses the libvirt connection URI plus an ``ILibvirtAuthCallback``; every behaviour-bearing call accepts ``aspects: AspectsNative = DEFAULT_LIBVIRT_ASPECTS`` (a libvirt-flavoured ``Aspects`` object, not ``AspectsRest``).
+
+Repository Structure
+====================
+
+- ``development/`` - Runtime environment scripts.
+- ``repository-setup/`` - Repository homing and setup scripts.
+- ``source/packages/automojo/interop/libvirt/`` - Package source code.
+- ``source/testroots/testbase/automojo/tests/interop/libvirt/`` - TestBase test roots.
+- ``specs/`` - Requirements, design, and task documentation (Kiro-style).
+- ``userguide/`` - Standards, conventions, and documentation.
+
+Environment Setup
+=================
+
+When working in a Codex container:
+
+.. code-block:: bash
+
+   ./development/setup-agent-container
+
+For local development:
+
+.. code-block:: bash
+
+   ./repository-setup/rehome-repository
+   ./development/setup-environment
+
+Running Tests
+=============
+
+.. code-block:: bash
+
+   source .venv/bin/activate
+   PYTHONPATH=source/packages:source/testroots/testbase python -m pytest source/testroots -q
+
+Standards and Conventions
+=========================
+
+- Naming conventions: ``userguide/10-02-naming-conventions.rst``
+- Code organization: ``userguide/10-01-code-organization.rst``
+- Coding standards: ``userguide/10-00-coding-standards.rst``
+
+Additional Resources
+====================
+
+- User guide entry point: ``userguide/userguide.rst``
