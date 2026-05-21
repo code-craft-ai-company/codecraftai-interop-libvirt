@@ -39,6 +39,55 @@ class DomainXmlComposer:
         being returned.
     """
 
+    def _validate_metadata_fragment(
+        self, *, metadata_xml: str, domain_name: str,
+    ) -> str:
+        """
+            Validate that ``metadata_xml`` is a single, self-contained,
+            well-formed XML element before it is embedded inside the
+            ``<metadata>`` element.
+
+            The libvirt ``<metadata>`` element legitimately carries a
+            caller-supplied XML fragment, so the value is NOT text-escaped
+            (escaping would corrupt valid metadata). Instead the fragment is
+            parsed standalone: a string such as
+            ``"</metadata><evil/>"`` or one carrying multiple top-level
+            elements fails to parse as one element and is rejected, which
+            closes the XML-injection hole described in the class docstring.
+
+            :param metadata_xml: The caller-supplied metadata XML fragment.
+            :param domain_name: The domain name, for error context.
+
+            :returns: The validated metadata XML fragment, unchanged.
+
+            :raises: :class:`LibvirtXmlCompositionError` when the fragment
+                is not a single well-formed XML element.
+        """
+        try:
+            parsed = ElementTree.fromstring(metadata_xml)
+        except ElementTree.ParseError as xcpt:
+            err_msg_lines = [
+                "LibvirtDomainSpec.metadata_xml is not a well-formed "
+                "XML fragment."
+            ]
+            err_msg_lines.append("DOMAIN: {}".format(domain_name))
+            err_msg_lines.append("PARSE-ERROR: {}".format(xcpt))
+            err_msg = os.linesep.join(err_msg_lines)
+            raise LibvirtXmlCompositionError(err_msg) from None
+
+        if parsed.tail is not None and len(parsed.tail.strip()) > 0:
+            err_msg_lines = [
+                "LibvirtDomainSpec.metadata_xml must be a single XML "
+                "element with no trailing content."
+            ]
+            err_msg_lines.append("DOMAIN: {}".format(domain_name))
+            err_msg_lines.append("TRAILING: {!r}".format(parsed.tail))
+            err_msg = os.linesep.join(err_msg_lines)
+            raise LibvirtXmlCompositionError(err_msg) from None
+
+        rtnval = metadata_xml
+        return rtnval
+
     def _compose_disk(self, *, disk: LibvirtDiskSpec) -> List[str]:
         """
             Compose the XML lines for a single disk device.
@@ -145,8 +194,12 @@ class DomainXmlComposer:
         lines.append("  </os>")
 
         if spec.metadata_xml is not None and len(spec.metadata_xml) > 0:
+            safe_metadata = self._validate_metadata_fragment(
+                metadata_xml=spec.metadata_xml,
+                domain_name=spec.name,
+            )
             lines.append("  <metadata>")
-            lines.append("    {}".format(spec.metadata_xml))
+            lines.append("    {}".format(safe_metadata))
             lines.append("  </metadata>")
 
         lines.append("  <devices>")
