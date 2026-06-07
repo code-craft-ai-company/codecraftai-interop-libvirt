@@ -7,23 +7,23 @@
 """
 
 __author__ = "Myron Walker"
-__copyright__ = "Copyright 2026, Automation Mojo LLC"
+__copyright__ = "Copyright 2026, Code Craft AI LLC"
 __credits__ = []
 
 
 import pytest
 
-from automojo.interop.libvirt.aspectslibvirt import AspectsNative
-from automojo.interop.libvirt.connection.libvirtconnectioncredential import (
+from ccai.interop.libvirt.aspectslibvirt import AspectsNative
+from ccai.interop.libvirt.connection.libvirtconnectioncredential import (
     LibvirtConnectionCredential
 )
-from automojo.interop.libvirt.connection.libvirtconnectionmanager import (
+from ccai.interop.libvirt.connection.libvirtconnectionmanager import (
     LibvirtConnectionManager
 )
-from automojo.interop.libvirt.exceptions.libvirtconnectionerror import (
+from ccai.interop.libvirt.exceptions.libvirtconnectionerror import (
     LibvirtConnectionError
 )
-from automojo.interop.libvirt.libvirtclient import LibvirtClient
+from ccai.interop.libvirt.libvirtclient import LibvirtClient
 
 
 def test_lazy_open_caches_connection(mock_libvirt, credential):

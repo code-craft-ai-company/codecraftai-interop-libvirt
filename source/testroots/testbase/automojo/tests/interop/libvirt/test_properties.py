@@ -9,7 +9,7 @@
 """
 
 __author__ = "Myron Walker"
-__copyright__ = "Copyright 2026, Automation Mojo LLC"
+__copyright__ = "Copyright 2026, Code Craft AI LLC"
 __credits__ = []
 
 
@@ -18,19 +18,19 @@ from xml.etree import ElementTree
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from automojo.interop.libvirt.aspectslibvirt import AspectsNative
-from automojo.interop.libvirt.connection.libvirtconnectioncredential import (
+from ccai.interop.libvirt.aspectslibvirt import AspectsNative
+from ccai.interop.libvirt.connection.libvirtconnectioncredential import (
     LibvirtConnectionCredential
 )
-from automojo.interop.libvirt.libvirtclient import LibvirtClient
-from automojo.interop.libvirt.specs.libvirtdiskspec import LibvirtDiskSpec
-from automojo.interop.libvirt.specs.libvirtdomainspec import (
+from ccai.interop.libvirt.libvirtclient import LibvirtClient
+from ccai.interop.libvirt.specs.libvirtdiskspec import LibvirtDiskSpec
+from ccai.interop.libvirt.specs.libvirtdomainspec import (
     LibvirtDomainSpec
 )
-from automojo.interop.libvirt.specs.libvirtnetworkspec import (
+from ccai.interop.libvirt.specs.libvirtnetworkspec import (
     LibvirtNetworkSpec
 )
-from automojo.interop.libvirt.xml.domainxmlcomposer import (
+from ccai.interop.libvirt.xml.domainxmlcomposer import (
     DomainXmlComposer
 )
 
@@ -86,7 +86,7 @@ def _fresh_client(module_holder):
     """
     import sys
 
-    from automojo.tests.interop.libvirt.mocklibvirt import (
+    from ccai.tests.interop.libvirt.mocklibvirt import (
         MockLibvirtModule
     )
 

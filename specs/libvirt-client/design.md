@@ -15,7 +15,7 @@ escapes user values and validates well-formedness before submission.
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│  automojo-provisioning / venues / libvirt              │
+│  codecraftai-provisioning / venues / libvirt              │
 └──────────┬─────────────────────────────────────────────┘
            │
            ▼
@@ -53,7 +53,7 @@ Exceptions: `LibvirtConnectionError`, `LibvirtXmlCompositionError`.
 ## Module Layout
 
 ```
-source/packages/automojo/interop/libvirt/
+source/packages/ccai/interop/libvirt/
 ├── libvirtclient.py
 ├── aspectslibvirt.py            # AspectsNative + DEFAULT_LIBVIRT_ASPECTS
 ├── connection/
@@ -80,7 +80,7 @@ source/packages/automojo/interop/libvirt/
 
 ## See Also
 
-- `automojo-provisioning/specs/venue-libvirt/`
+- `codecraftai-provisioning/specs/venue-libvirt/`
 - Cross-cutting usability commitment §8.1: one transport per package — this is the
   canonical native-binding example.
 

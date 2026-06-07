@@ -1,8 +1,8 @@
 =========================================
-Automation Mojo Interop - libvirt / KVM
+Code Craft AI Interop - libvirt / KVM
 =========================================
 
-The ``automojo-interop-libvirt`` package is the venue-specific client for libvirt-managed
+The ``codecraftai-interop-libvirt`` package is the venue-specific client for libvirt-managed
 hypervisors (KVM/QEMU primarily, with Xen, LXC, and VirtualBox reachable through the same
 binding). libvirt's wire protocol is a custom binary RPC accessed through the official
 ``libvirt-python`` bindings, so ``RestClientBase`` does not apply — this package is the
@@ -23,8 +23,8 @@ Repository Structure
 
 - ``development/`` - Runtime environment scripts.
 - ``repository-setup/`` - Repository homing and setup scripts.
-- ``source/packages/automojo/interop/libvirt/`` - Package source code.
-- ``source/testroots/testbase/automojo/tests/interop/libvirt/`` - TestBase test roots.
+- ``source/packages/ccai/interop/libvirt/`` - Package source code.
+- ``source/testroots/testbase/ccai/tests/interop/libvirt/`` - TestBase test roots.
 - ``specs/`` - Requirements, design, and task documentation (Kiro-style).
 - ``userguide/`` - Standards, conventions, and documentation.
 

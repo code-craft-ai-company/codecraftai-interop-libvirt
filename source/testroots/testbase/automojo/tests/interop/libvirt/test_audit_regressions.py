@@ -9,7 +9,7 @@
 """
 
 __author__ = "Myron Walker"
-__copyright__ = "Copyright 2026, Automation Mojo LLC"
+__copyright__ = "Copyright 2026, Code Craft AI LLC"
 __credits__ = []
 
 
@@ -17,22 +17,22 @@ from xml.etree import ElementTree
 
 import pytest
 
-from automojo.errors.exceptions import SemanticError
+from ccai.errors.exceptions import SemanticError
 
-from automojo.interop.libvirt.apigroups.retrysupport import run_with_retry
-from automojo.interop.libvirt.aspectslibvirt import AspectsNative
-from automojo.interop.libvirt.exceptions.libvirtoperationerror import (
+from ccai.interop.libvirt.apigroups.retrysupport import run_with_retry
+from ccai.interop.libvirt.aspectslibvirt import AspectsNative
+from ccai.interop.libvirt.exceptions.libvirtoperationerror import (
     LibvirtOperationError
 )
-from automojo.interop.libvirt.exceptions.libvirtxmlcompositionerror import (
+from ccai.interop.libvirt.exceptions.libvirtxmlcompositionerror import (
     LibvirtXmlCompositionError
 )
-from automojo.interop.libvirt.specs.libvirtdomainspec import (
+from ccai.interop.libvirt.specs.libvirtdomainspec import (
     LibvirtDomainSpec
 )
-from automojo.interop.libvirt.xml.domainxmlcomposer import DomainXmlComposer
+from ccai.interop.libvirt.xml.domainxmlcomposer import DomainXmlComposer
 
-from automojo.tests.interop.libvirt.mocklibvirt import libvirtError
+from ccai.tests.interop.libvirt.mocklibvirt import libvirtError
 
 
 # ----------------------------------------------------------------------
