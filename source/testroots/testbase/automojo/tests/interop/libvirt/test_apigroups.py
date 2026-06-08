@@ -9,24 +9,24 @@
 """
 
 __author__ = "Myron Walker"
-__copyright__ = "Copyright 2026, Automation Mojo LLC"
+__copyright__ = "Copyright 2026, Code Craft AI LLC"
 __credits__ = []
 
 
 import pytest
 
-from automojo.interop.libvirt.specs.libvirtdiskspec import LibvirtDiskSpec
-from automojo.interop.libvirt.specs.libvirtdomainspec import (
+from ccai.interop.libvirt.specs.libvirtdiskspec import LibvirtDiskSpec
+from ccai.interop.libvirt.specs.libvirtdomainspec import (
     LibvirtDomainSpec
 )
-from automojo.interop.libvirt.specs.libvirtnetworkspec import (
+from ccai.interop.libvirt.specs.libvirtnetworkspec import (
     LibvirtNetworkSpec
 )
-from automojo.interop.libvirt.specs.libvirtnicspec import LibvirtNicSpec
-from automojo.interop.libvirt.specs.libvirtstoragepoolspec import (
+from ccai.interop.libvirt.specs.libvirtnicspec import LibvirtNicSpec
+from ccai.interop.libvirt.specs.libvirtstoragepoolspec import (
     LibvirtStoragePoolSpec
 )
-from automojo.interop.libvirt.specs.libvirtvolumespec import (
+from ccai.interop.libvirt.specs.libvirtvolumespec import (
     LibvirtVolumeSpec
 )
 

@@ -11,7 +11,7 @@
 """
 
 __author__ = "Myron Walker"
-__copyright__ = "Copyright 2026, Automation Mojo LLC"
+__copyright__ = "Copyright 2026, Code Craft AI LLC"
 __credits__ = []
 
 
@@ -19,13 +19,13 @@ import sys
 
 import pytest
 
-from automojo.interop.libvirt.aspectslibvirt import AspectsNative
-from automojo.interop.libvirt.connection.libvirtconnectioncredential import (
+from ccai.interop.libvirt.aspectslibvirt import AspectsNative
+from ccai.interop.libvirt.connection.libvirtconnectioncredential import (
     LibvirtConnectionCredential
 )
-from automojo.interop.libvirt.libvirtclient import LibvirtClient
+from ccai.interop.libvirt.libvirtclient import LibvirtClient
 
-from automojo.tests.interop.libvirt.mocklibvirt import MockLibvirtModule
+from ccai.tests.interop.libvirt.mocklibvirt import MockLibvirtModule
 
 
 @pytest.fixture

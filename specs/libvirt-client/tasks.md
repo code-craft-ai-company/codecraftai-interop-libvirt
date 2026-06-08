@@ -2,7 +2,7 @@
 
 ## Package Skeleton
 
-- [x] 1. Create `source/packages/automojo/interop/libvirt/` package tree with `connection/`, `apigroups/`, `xml/`, `model/`, `specs/`, `exceptions/` subpackages.
+- [x] 1. Create `source/packages/ccai/interop/libvirt/` package tree with `connection/`, `apigroups/`, `xml/`, `model/`, `specs/`, `exceptions/` subpackages.
 - [x] 2. Add `aspectslibvirt.py` defining `AspectsNative` and `DEFAULT_LIBVIRT_ASPECTS`.
 
 ## Connection Lifecycle
