@@ -42,9 +42,9 @@ The client covers connection lifecycle, host capability and node-info
 queries, network management (NAT/bridged/isolated), storage pool and
 volume management, domain (VM) lifecycle (define/create/start/shutdown/
 destroy/undefine), domain XML templating with safe parameterisation,
-disk/NIC attach-detach, snapshot management, and a typed
-`LibvirtTaskHandle` for the few libvirt operations that are genuinely
-asynchronous.
+disk/NIC attach-detach, and snapshot management. The libvirt operations
+exposed here are synchronous via the native binding; no asynchronous
+task-handle surface is provided.
 
 Authentication uses the libvirt connection URI plus an
 `ILibvirtAuthCallback` for SASL/SSH transports. Every behaviour-bearing

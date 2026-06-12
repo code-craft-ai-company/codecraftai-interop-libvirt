@@ -50,6 +50,28 @@ _STATE_TOKENS = {
 }
 
 
+def _xml_attribute_present(haystack: str, attribute: str, value: str) -> bool:
+    """
+        Tests whether an XML document contains ``attribute="value"`` for either
+        quote style.
+
+        libvirt's ``XMLDesc`` is serialized by libxml2 with double-quoted
+        attributes (``dev="vda"``), while the composer emits single quotes
+        (``dev='vda'``). Idempotency checks must match both so they work against
+        real libvirt output, not only the single-quoted mock.
+
+        :param haystack: The XML text to search.
+        :param attribute: The attribute name (e.g. ``dev`` or ``address``).
+        :param value: The attribute value to look for.
+
+        :returns: ``True`` when the attribute/value pair is present.
+    """
+    single_quoted = "{}='{}'".format(attribute, value)
+    double_quoted = '{}="{}"'.format(attribute, value)
+    rtnval = single_quoted in haystack or double_quoted in haystack
+    return rtnval
+
+
 def _domain_info(*, native_domain: Any) -> LibvirtDomainInfo:
     """
         Build a :class:`LibvirtDomainInfo` from a native domain handle.
@@ -421,8 +443,7 @@ class DomainsGroup:
             native = self._require_native(connection=connection,
                                           name=domain_name)
             current = native.XMLDesc(0)
-            marker = "dev='{}'".format(spec.target_dev)
-            if marker in current:
+            if _xml_attribute_present(current, "dev", spec.target_dev):
                 return None
             native.attachDevice(device_xml)
             return None
@@ -455,8 +476,7 @@ class DomainsGroup:
             native = self._require_native(connection=connection,
                                           name=domain_name)
             current = native.XMLDesc(0)
-            marker = "dev='{}'".format(target_dev)
-            if marker not in current:
+            if not _xml_attribute_present(current, "dev", target_dev):
                 return None
             native.detachDevice(device_xml)
             return None
@@ -490,8 +510,7 @@ class DomainsGroup:
                                           name=domain_name)
             current = native.XMLDesc(0)
             if spec.mac_address is not None:
-                marker = "address='{}'".format(spec.mac_address)
-                if marker in current:
+                if _xml_attribute_present(current, "address", spec.mac_address):
                     return None
             native.attachDevice(device_xml)
             return None
@@ -525,8 +544,7 @@ class DomainsGroup:
             native = self._require_native(connection=connection,
                                           name=domain_name)
             current = native.XMLDesc(0)
-            marker = "address='{}'".format(mac)
-            if marker not in current:
+            if not _xml_attribute_present(current, "address", mac):
                 return None
             native.detachDevice(device_xml)
             return None

@@ -14,6 +14,9 @@ __credits__ = []
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+from ccai.interop.libvirt.specs.libvirtdiskspec import LibvirtDiskSpec
+from ccai.interop.libvirt.specs.libvirtnicspec import LibvirtNicSpec
+
 
 @dataclass
 class LibvirtDomainSpec:
@@ -36,8 +39,8 @@ class LibvirtDomainSpec:
     name: str
     memory_kib: int = 1048576
     vcpus: int = 1
-    disks: List["LibvirtDiskSpec"] = field(default_factory=list)
-    nics: List["LibvirtNicSpec"] = field(default_factory=list)
+    disks: List[LibvirtDiskSpec] = field(default_factory=list)
+    nics: List[LibvirtNicSpec] = field(default_factory=list)
     cdrom_path: Optional[str] = None
     os_type: str = "hvm"
     arch: str = "x86_64"

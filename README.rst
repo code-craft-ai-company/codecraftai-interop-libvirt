@@ -15,7 +15,7 @@ Highlights
 - ``LibvirtClient`` — the venue client speaking libvirt-native RPC; connection lifecycle plus host capability and node-info queries.
 - Network and storage management — NAT/bridged/isolated networks, storage pools, and volumes.
 - Domain lifecycle — define/create/start/shutdown/destroy/undefine, domain XML templating with safe parameterisation, and disk/NIC attach-detach.
-- Snapshots and task handles — snapshot management and a typed ``LibvirtTaskHandle`` for the few genuinely asynchronous libvirt operations.
+- Snapshots — snapshot management. (The libvirt operations exposed here are synchronous via the native binding; no asynchronous task-handle surface is provided.)
 - Aspects-driven transport — authentication uses the libvirt connection URI plus an ``ILibvirtAuthCallback``; every behaviour-bearing call accepts ``aspects: AspectsNative = DEFAULT_LIBVIRT_ASPECTS`` (a libvirt-flavoured ``Aspects`` object, not ``AspectsRest``).
 
 Repository Structure
