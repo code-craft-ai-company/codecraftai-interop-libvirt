@@ -80,21 +80,18 @@ def _fresh_client(module_holder):
     """
         Build a client bound to a fresh mock module.
 
-        :param module_holder: List used to retain the mock module.
+        :param module_holder: List used to retain the mock runner.
 
         :returns: A LibvirtClient.
     """
-    import sys
-
-    from ccai.tests.interop.libvirt.mocklibvirt import (
-        MockLibvirtModule
+    from ccai.tests.interop.libvirt.mockvirshrunner import (
+        MockVirshRunner
     )
 
-    module = MockLibvirtModule()
-    sys.modules["libvirt"] = module
-    module_holder.append(module)
+    runner = MockVirshRunner()
+    module_holder.append(runner)
     credential = LibvirtConnectionCredential(uri="qemu:///system")
-    rtnval = LibvirtClient(credential=credential)
+    rtnval = LibvirtClient(credential=credential, runner=runner)
     return rtnval
 
 
@@ -115,8 +112,7 @@ def test_define_network_converges(repeats):
         networks = client.networks.list_networks()
         assert len(networks) == 1
     finally:
-        import sys
-        sys.modules.pop("libvirt", None)
+        pass
     return
 
 
@@ -140,8 +136,7 @@ def test_attach_disk_converges(repeats):
         xml = client.domains.get_domain_xml(name="vm-alpha")
         assert xml.count("dev='vdb'") == 1
     finally:
-        import sys
-        sys.modules.pop("libvirt", None)
+        pass
     return
 
 
@@ -162,8 +157,7 @@ def test_retry_budget_yields_same_result(budget):
                                                 aspects=aspects)
         assert first.uuid == second.uuid
     finally:
-        import sys
-        sys.modules.pop("libvirt", None)
+        pass
     return
 
 
@@ -179,9 +173,9 @@ def test_wait_for_domain_state_terminal_correctness(prefix_len):
         client = _fresh_client(module_holder=holder)
         domain = LibvirtDomainSpec(name="vm-alpha")
         client.domains.define_domain(spec=domain)
-        native = client.domains._connection_manager.connection(
-        )._domains["vm-alpha"]
-        native.state_script = ([5] * prefix_len) + [1]
+        runner = holder[0]
+        runner.domains["vm-alpha"]["state_script"] = (
+            ["shutoff"] * prefix_len) + ["running"]
 
         aspects = AspectsNative(completion_interval=0.0,
                                 completion_timeout=5.0)
@@ -190,6 +184,5 @@ def test_wait_for_domain_state_terminal_correctness(prefix_len):
         )
         assert info.state == "running"
     finally:
-        import sys
-        sys.modules.pop("libvirt", None)
+        pass
     return

@@ -14,7 +14,7 @@ __credits__ = []
 import os
 import time
 
-from typing import Any, List, Optional
+from typing import Dict, List, Optional
 
 from ccai.interop.libvirt.aspectslibvirt import (
     AspectsNative, DEFAULT_LIBVIRT_ASPECTS
@@ -22,6 +22,13 @@ from ccai.interop.libvirt.aspectslibvirt import (
 from ccai.interop.libvirt.apigroups.retrysupport import run_with_retry
 from ccai.interop.libvirt.connection.libvirtconnectionmanager import (
     LibvirtConnectionManager
+)
+from ccai.interop.libvirt.connection.virshparsers import (
+    parse_cpu_time_ns, parse_key_value_block, parse_memory_kib,
+    parse_name_lines, parse_state_token
+)
+from ccai.interop.libvirt.exceptions.libvirtoperationerror import (
+    LibvirtOperationError
 )
 from ccai.interop.libvirt.model.libvirtdomaininfo import (
     LibvirtDomainInfo
@@ -36,29 +43,15 @@ from ccai.interop.libvirt.xml.domainxmlcomposer import (
 )
 
 
-# Maps the integer libvirt domain state to a stable token.  Declared
-# locally so the module imports without the native bindings.
-_STATE_TOKENS = {
-    0: "nostate",
-    1: "running",
-    2: "blocked",
-    3: "paused",
-    4: "shutdown",
-    5: "shutoff",
-    6: "crashed",
-    7: "pmsuspended",
-}
-
-
 def _xml_attribute_present(haystack: str, attribute: str, value: str) -> bool:
     """
         Tests whether an XML document contains ``attribute="value"`` for either
         quote style.
 
-        libvirt's ``XMLDesc`` is serialized by libxml2 with double-quoted
+        ``virsh dumpxml`` output is serialized by libxml2 with double-quoted
         attributes (``dev="vda"``), while the composer emits single quotes
         (``dev='vda'``). Idempotency checks must match both so they work against
-        real libvirt output, not only the single-quoted mock.
+        real libvirt output, not only single-quoted fixtures.
 
         :param haystack: The XML text to search.
         :param attribute: The attribute name (e.g. ``dev`` or ``address``).
@@ -72,24 +65,23 @@ def _xml_attribute_present(haystack: str, attribute: str, value: str) -> bool:
     return rtnval
 
 
-def _domain_info(*, native_domain: Any) -> LibvirtDomainInfo:
+def _domain_info(*, name: str, fields: Dict[str, str]) -> LibvirtDomainInfo:
     """
-        Build a :class:`LibvirtDomainInfo` from a native domain handle.
+        Build a :class:`LibvirtDomainInfo` from ``dominfo`` fields.
 
-        :param native_domain: The native libvirt domain object.
+        :param name: The domain name.
+        :param fields: The parsed ``dominfo`` field dict.
 
         :returns: A :class:`LibvirtDomainInfo` record.
     """
-    raw = native_domain.info()
-    state_code, max_mem, _mem, vcpus, cpu_time = (raw[0], raw[1], raw[2],
-                                                  raw[3], raw[4])
-    state = _STATE_TOKENS.get(int(state_code), "unknown")
-    rtnval = LibvirtDomainInfo(name=native_domain.name(),
-                               uuid=native_domain.UUIDString(),
-                               state=state,
-                               vcpus=int(vcpus),
-                               memory_kib=int(max_mem),
-                               cpu_time_ns=int(cpu_time))
+    rtnval = LibvirtDomainInfo(
+        name=fields.get("Name", name),
+        uuid=fields.get("UUID", ""),
+        state=parse_state_token(fields.get("State", "")),
+        vcpus=int(fields.get("CPU(s)", "0")),
+        memory_kib=parse_memory_kib(fields.get("Max memory", "0")),
+        cpu_time_ns=parse_cpu_time_ns(fields.get("CPU time", "0s")),
+    )
     return rtnval
 
 
@@ -114,43 +106,54 @@ class DomainsGroup:
         self._composer: DomainXmlComposer = DomainXmlComposer()
         return
 
-    def _find_native(self, *, connection: Any,
-                     name: str) -> Optional[Any]:
+    def _find_fields(self, *, name: str,
+                     aspects: AspectsNative) -> Optional[Dict[str, str]]:
         """
-            Look up a native domain by name, tolerating absence.
+            Look up a domain's ``dominfo`` fields, tolerating absence.
 
-            :param connection: The native libvirt connection.
             :param name: The domain name.
+            :param aspects: The :class:`AspectsNative` carrier.
 
-            :returns: The native domain handle or ``None``.
+            :returns: The parsed field dict or ``None``.
         """
-        try:
-            rtnval = connection.lookupByName(name)
-        except Exception:
+        output = self._connection_manager.probe(
+            args=["dominfo", name], aspects=aspects)
+        if output is None:
             rtnval = None
+            return rtnval
+        rtnval = parse_key_value_block(output)
         return rtnval
 
-    def _require_native(self, *, connection: Any, name: str) -> Any:
+    def _require_fields(self, *, name: str,
+                        aspects: AspectsNative) -> Dict[str, str]:
         """
-            Look up a native domain, raising when it is absent.
+            Look up a domain's ``dominfo`` fields, raising when absent.
 
-            :param connection: The native libvirt connection.
             :param name: The domain name.
+            :param aspects: The :class:`AspectsNative` carrier.
 
-            :returns: The native domain handle.
+            :returns: The parsed field dict.
 
             :raises: :class:`LibvirtOperationError`
         """
-        from ccai.interop.libvirt.exceptions.libvirtoperationerror import (
-            LibvirtOperationError
-        )
-        native = self._find_native(connection=connection, name=name)
-        if native is None:
+        fields = self._find_fields(name=name, aspects=aspects)
+        if fields is None:
             err_msg_lines = ["The named domain was not found."]
             err_msg_lines.append("DOMAIN: {}".format(name))
             err_msg = os.linesep.join(err_msg_lines)
             raise LibvirtOperationError(err_msg)
-        rtnval = native
+        rtnval = fields
+        return rtnval
+
+    def _domain_state(self, *, fields: Dict[str, str]) -> str:
+        """
+            Extract the stable state token from ``dominfo`` fields.
+
+            :param fields: The parsed ``dominfo`` field dict.
+
+            :returns: The stable state token.
+        """
+        rtnval = parse_state_token(fields.get("State", ""))
         return rtnval
 
     def list_domains(self, *,
@@ -163,12 +166,18 @@ class DomainsGroup:
 
             :returns: A list of :class:`LibvirtDomainInfo` records.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
 
         def _operation() -> List[LibvirtDomainInfo]:
+            output = manager.run(args=["list", "--all", "--name"],
+                                 aspects=aspects,
+                                 description="list_domains")
             records: List[LibvirtDomainInfo] = []
-            for native in connection.listAllDomains():
-                records.append(_domain_info(native_domain=native))
+            for name in parse_name_lines(output):
+                fields = self._find_fields(name=name, aspects=aspects)
+                if fields is None:
+                    continue
+                records.append(_domain_info(name=name, fields=fields))
             return records
 
         rtnval = run_with_retry(operation=_operation, aspects=aspects,
@@ -179,18 +188,20 @@ class DomainsGroup:
                         aspects: AspectsNative = DEFAULT_LIBVIRT_ASPECTS
                         ) -> LibvirtDomainInfo:
         """
-            Return the runtime info record for a domain.
+            Return a :class:`LibvirtDomainInfo` for a named domain.
 
             :param name: The domain name.
             :param aspects: The :class:`AspectsNative` carrier.
 
             :returns: A :class:`LibvirtDomainInfo` record.
+
+            :raises: :class:`LibvirtOperationError` when the domain is
+                absent.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
 
         def _operation() -> LibvirtDomainInfo:
-            native = self._require_native(connection=connection, name=name)
-            result = _domain_info(native_domain=native)
+            fields = self._require_fields(name=name, aspects=aspects)
+            result = _domain_info(name=name, fields=fields)
             return result
 
         rtnval = run_with_retry(operation=_operation, aspects=aspects,
@@ -201,18 +212,19 @@ class DomainsGroup:
                        aspects: AspectsNative = DEFAULT_LIBVIRT_ASPECTS
                        ) -> str:
         """
-            Return the persistent XML description for a domain.
+            Return the domain definition XML.
 
             :param name: The domain name.
             :param aspects: The :class:`AspectsNative` carrier.
 
             :returns: The domain XML string.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
 
         def _operation() -> str:
-            native = self._require_native(connection=connection, name=name)
-            result = native.XMLDesc(0)
+            self._require_fields(name=name, aspects=aspects)
+            result = manager.run(args=["dumpxml", name], aspects=aspects,
+                                 description="get_domain_xml")
             return result
 
         rtnval = run_with_retry(operation=_operation, aspects=aspects,
@@ -226,56 +238,35 @@ class DomainsGroup:
             Define a domain from a spec, idempotently.
 
             When a domain with the same name already exists the existing
-            record is returned without redefinition.
+            record is returned and no redefinition occurs.
 
             :param spec: The :class:`LibvirtDomainSpec`.
             :param aspects: The :class:`AspectsNative` carrier.
 
             :returns: A :class:`LibvirtDomainInfo` record.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
         xml_document = self._composer.compose(spec=spec)
 
         def _operation() -> LibvirtDomainInfo:
-            existing = self._find_native(connection=connection,
-                                         name=spec.name)
+            existing = self._find_fields(name=spec.name, aspects=aspects)
             if existing is not None:
-                result = _domain_info(native_domain=existing)
+                result = _domain_info(name=spec.name, fields=existing)
                 return result
-            native = connection.defineXML(xml_document)
-            result = _domain_info(native_domain=native)
+            manager.run(args=["define", "/dev/stdin"],
+                        stdin=xml_document, aspects=aspects,
+                        description="define_domain")
+            fields = self._require_fields(name=spec.name, aspects=aspects)
+            result = _domain_info(name=spec.name, fields=fields)
             return result
 
         rtnval = run_with_retry(operation=_operation, aspects=aspects,
                                 description="define_domain")
         return rtnval
 
-    def _simple_action(self, *, name: str, action_name: str,
-                       aspects: AspectsNative) -> None:
-        """
-            Run a simple no-argument lifecycle action on a domain.
-
-            :param name: The domain name.
-            :param action_name: The native method to invoke.
-            :param aspects: The :class:`AspectsNative` carrier.
-
-            :returns: ``None``.
-        """
-        connection = self._connection_manager.connection(aspects=aspects)
-
-        def _operation() -> None:
-            native = self._require_native(connection=connection, name=name)
-            method = getattr(native, action_name)
-            method()
-            return None
-
-        run_with_retry(operation=_operation, aspects=aspects,
-                       description=action_name)
-        return
-
     def create_domain(self, *, name: str,
-                       aspects: AspectsNative = DEFAULT_LIBVIRT_ASPECTS
-                       ) -> None:
+                      aspects: AspectsNative = DEFAULT_LIBVIRT_ASPECTS
+                      ) -> None:
         """
             Start a defined domain.  Already-running is a no-op.
 
@@ -284,12 +275,13 @@ class DomainsGroup:
 
             :returns: ``None``.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
 
         def _operation() -> None:
-            native = self._require_native(connection=connection, name=name)
-            if bool(native.isActive()) is False:
-                native.create()
+            fields = self._require_fields(name=name, aspects=aspects)
+            if self._domain_state(fields=fields) != "running":
+                manager.run(args=["start", name], aspects=aspects,
+                            description="create_domain")
             return None
 
         run_with_retry(operation=_operation, aspects=aspects,
@@ -300,34 +292,43 @@ class DomainsGroup:
                         aspects: AspectsNative = DEFAULT_LIBVIRT_ASPECTS
                         ) -> None:
         """
-            Gracefully shut down a domain.
+            Request a graceful guest shutdown.
 
             :param name: The domain name.
             :param aspects: The :class:`AspectsNative` carrier.
 
             :returns: ``None``.
         """
-        self._simple_action(name=name, action_name="shutdown",
-                            aspects=aspects)
+        manager = self._connection_manager
+
+        def _operation() -> None:
+            self._require_fields(name=name, aspects=aspects)
+            manager.run(args=["shutdown", name], aspects=aspects,
+                        description="shutdown_domain")
+            return None
+
+        run_with_retry(operation=_operation, aspects=aspects,
+                       description="shutdown_domain")
         return
 
     def destroy_domain(self, *, name: str,
                        aspects: AspectsNative = DEFAULT_LIBVIRT_ASPECTS
                        ) -> None:
         """
-            Forcefully power off a domain.  Already-off is a no-op.
+            Forcefully stop a domain.  Already-stopped is a no-op.
 
             :param name: The domain name.
             :param aspects: The :class:`AspectsNative` carrier.
 
             :returns: ``None``.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
 
         def _operation() -> None:
-            native = self._require_native(connection=connection, name=name)
-            if bool(native.isActive()) is True:
-                native.destroy()
+            fields = self._require_fields(name=name, aspects=aspects)
+            if self._domain_state(fields=fields) == "running":
+                manager.run(args=["destroy", name], aspects=aspects,
+                            description="destroy_domain")
             return None
 
         run_with_retry(operation=_operation, aspects=aspects,
@@ -338,18 +339,19 @@ class DomainsGroup:
                       aspects: AspectsNative = DEFAULT_LIBVIRT_ASPECTS
                       ) -> None:
         """
-            Reboot a domain.
+            Request a guest reboot.
 
             :param name: The domain name.
             :param aspects: The :class:`AspectsNative` carrier.
 
             :returns: ``None``.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
 
         def _operation() -> None:
-            native = self._require_native(connection=connection, name=name)
-            native.reboot(0)
+            self._require_fields(name=name, aspects=aspects)
+            manager.run(args=["reboot", name], aspects=aspects,
+                        description="reboot_domain")
             return None
 
         run_with_retry(operation=_operation, aspects=aspects,
@@ -360,15 +362,23 @@ class DomainsGroup:
                        aspects: AspectsNative = DEFAULT_LIBVIRT_ASPECTS
                        ) -> None:
         """
-            Suspend a running domain.
+            Suspend (pause) a running domain.
 
             :param name: The domain name.
             :param aspects: The :class:`AspectsNative` carrier.
 
             :returns: ``None``.
         """
-        self._simple_action(name=name, action_name="suspend",
-                            aspects=aspects)
+        manager = self._connection_manager
+
+        def _operation() -> None:
+            self._require_fields(name=name, aspects=aspects)
+            manager.run(args=["suspend", name], aspects=aspects,
+                        description="suspend_domain")
+            return None
+
+        run_with_retry(operation=_operation, aspects=aspects,
+                       description="suspend_domain")
         return
 
     def resume_domain(self, *, name: str,
@@ -382,8 +392,16 @@ class DomainsGroup:
 
             :returns: ``None``.
         """
-        self._simple_action(name=name, action_name="resume",
-                            aspects=aspects)
+        manager = self._connection_manager
+
+        def _operation() -> None:
+            self._require_fields(name=name, aspects=aspects)
+            manager.run(args=["resume", name], aspects=aspects,
+                        description="resume_domain")
+            return None
+
+        run_with_retry(operation=_operation, aspects=aspects,
+                       description="resume_domain")
         return
 
     def undefine_domain(self, *, name: str,
@@ -400,15 +418,17 @@ class DomainsGroup:
 
             :returns: ``None``.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
 
         def _operation() -> None:
-            native = self._find_native(connection=connection, name=name)
-            if native is None:
+            fields = self._find_fields(name=name, aspects=aspects)
+            if fields is None:
                 return None
-            if bool(native.isActive()) is True:
-                native.destroy()
-            native.undefine()
+            if self._domain_state(fields=fields) == "running":
+                manager.run(args=["destroy", name], aspects=aspects,
+                            description="undefine_domain")
+            manager.run(args=["undefine", name], aspects=aspects,
+                        description="undefine_domain")
             return None
 
         run_with_retry(operation=_operation, aspects=aspects,
@@ -416,8 +436,22 @@ class DomainsGroup:
         return
 
     # ------------------------------------------------------------------
-    # Disk / NIC attach-detach
+    # Device operations
     # ------------------------------------------------------------------
+
+    def _current_xml(self, *, name: str, aspects: AspectsNative) -> str:
+        """
+            Return the current domain XML for idempotency checks.
+
+            :param name: The domain name.
+            :param aspects: The :class:`AspectsNative` carrier.
+
+            :returns: The domain XML string.
+        """
+        rtnval = self._connection_manager.run(
+            args=["dumpxml", name], aspects=aspects,
+            description="dumpxml")
+        return rtnval
 
     def attach_disk(self, *, domain_name: str, spec: LibvirtDiskSpec,
                     aspects: AspectsNative = DEFAULT_LIBVIRT_ASPECTS
@@ -425,8 +459,8 @@ class DomainsGroup:
         """
             Attach a disk device to a domain, idempotently.
 
-            When a disk with the same target device is already attached
-            the call is a no-op.
+            When a device with the same target is already attached the
+            call is a no-op.
 
             :param domain_name: The domain name.
             :param spec: The :class:`LibvirtDiskSpec`.
@@ -434,18 +468,19 @@ class DomainsGroup:
 
             :returns: ``None``.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
         device_xml = os.linesep.join(
             self._composer._compose_disk(disk=spec)
         )
 
         def _operation() -> None:
-            native = self._require_native(connection=connection,
-                                          name=domain_name)
-            current = native.XMLDesc(0)
+            self._require_fields(name=domain_name, aspects=aspects)
+            current = self._current_xml(name=domain_name, aspects=aspects)
             if _xml_attribute_present(current, "dev", spec.target_dev):
                 return None
-            native.attachDevice(device_xml)
+            manager.run(args=["attach-device", domain_name, "/dev/stdin"],
+                        stdin=device_xml, aspects=aspects,
+                        description="attach_disk")
             return None
 
         run_with_retry(operation=_operation, aspects=aspects,
@@ -466,19 +501,20 @@ class DomainsGroup:
 
             :returns: ``None``.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
         spec = LibvirtDiskSpec(source_path="", target_dev=target_dev)
         device_xml = os.linesep.join(
             self._composer._compose_disk(disk=spec)
         )
 
         def _operation() -> None:
-            native = self._require_native(connection=connection,
-                                          name=domain_name)
-            current = native.XMLDesc(0)
+            self._require_fields(name=domain_name, aspects=aspects)
+            current = self._current_xml(name=domain_name, aspects=aspects)
             if not _xml_attribute_present(current, "dev", target_dev):
                 return None
-            native.detachDevice(device_xml)
+            manager.run(args=["detach-device", domain_name, "/dev/stdin"],
+                        stdin=device_xml, aspects=aspects,
+                        description="detach_disk")
             return None
 
         run_with_retry(operation=_operation, aspects=aspects,
@@ -500,19 +536,21 @@ class DomainsGroup:
 
             :returns: ``None``.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
         device_xml = os.linesep.join(
             self._composer._compose_nic(nic=spec)
         )
 
         def _operation() -> None:
-            native = self._require_native(connection=connection,
-                                          name=domain_name)
-            current = native.XMLDesc(0)
+            self._require_fields(name=domain_name, aspects=aspects)
+            current = self._current_xml(name=domain_name, aspects=aspects)
             if spec.mac_address is not None:
-                if _xml_attribute_present(current, "address", spec.mac_address):
+                if _xml_attribute_present(current, "address",
+                                          spec.mac_address):
                     return None
-            native.attachDevice(device_xml)
+            manager.run(args=["attach-device", domain_name, "/dev/stdin"],
+                        stdin=device_xml, aspects=aspects,
+                        description="attach_nic")
             return None
 
         run_with_retry(operation=_operation, aspects=aspects,
@@ -534,19 +572,20 @@ class DomainsGroup:
 
             :returns: ``None``.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
         spec = LibvirtNicSpec(network_name="default", mac_address=mac)
         device_xml = os.linesep.join(
             self._composer._compose_nic(nic=spec)
         )
 
         def _operation() -> None:
-            native = self._require_native(connection=connection,
-                                          name=domain_name)
-            current = native.XMLDesc(0)
+            self._require_fields(name=domain_name, aspects=aspects)
+            current = self._current_xml(name=domain_name, aspects=aspects)
             if not _xml_attribute_present(current, "address", mac):
                 return None
-            native.detachDevice(device_xml)
+            manager.run(args=["detach-device", domain_name, "/dev/stdin"],
+                        stdin=device_xml, aspects=aspects,
+                        description="detach_nic")
             return None
 
         run_with_retry(operation=_operation, aspects=aspects,

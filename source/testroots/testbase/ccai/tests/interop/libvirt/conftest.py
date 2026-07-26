@@ -3,9 +3,10 @@
     :platform: Darwin, Linux, Unix, Windows
     :synopsis: Shared fixtures for the libvirt interop client tests.
 
-    Each test gets a fresh :class:`MockLibvirtModule` injected into
-    ``sys.modules`` so the lazily-imported native ``libvirt`` module is
-    fully replaced.  No real hypervisor is ever contacted.
+    Each test gets a fresh :class:`MockVirshRunner` injected as the
+    client's command runner, so ``virsh`` is fully emulated in memory.
+    No real hypervisor, ``virsh`` binary, or native binding is ever
+    touched.
 
     .. moduleauthor:: Myron Walker <myron.walker@gmail.com>
 """
@@ -15,8 +16,6 @@ __copyright__ = "Copyright 2026, Code Craft AI LLC"
 __credits__ = []
 
 
-import sys
-
 import pytest
 
 from ccai.interop.libvirt.aspectslibvirt import AspectsNative
@@ -25,25 +24,18 @@ from ccai.interop.libvirt.connection.libvirtconnectioncredential import (
 )
 from ccai.interop.libvirt.libvirtclient import LibvirtClient
 
-from ccai.tests.interop.libvirt.mocklibvirt import MockLibvirtModule
+from ccai.tests.interop.libvirt.mockvirshrunner import MockVirshRunner
 
 
 @pytest.fixture
-def mock_libvirt() -> MockLibvirtModule:
+def mock_virsh() -> MockVirshRunner:
     """
-        Inject a fresh mock ``libvirt`` module into ``sys.modules``.
+        Return a fresh in-memory ``virsh`` emulator.
 
-        :returns: The :class:`MockLibvirtModule` instance.
+        :returns: The :class:`MockVirshRunner` instance.
     """
-    module = MockLibvirtModule()
-    saved = sys.modules.get("libvirt", None)
-    sys.modules["libvirt"] = module
-    yield module
-    if saved is not None:
-        sys.modules["libvirt"] = saved
-    else:
-        del sys.modules["libvirt"]
-    return
+    rtnval = MockVirshRunner()
+    return rtnval
 
 
 @pytest.fixture
@@ -58,17 +50,17 @@ def credential() -> LibvirtConnectionCredential:
 
 
 @pytest.fixture
-def client(mock_libvirt: MockLibvirtModule,
+def client(mock_virsh: MockVirshRunner,
            credential: LibvirtConnectionCredential) -> LibvirtClient:
     """
-        Return a :class:`LibvirtClient` bound to the mock module.
+        Return a :class:`LibvirtClient` bound to the mock runner.
 
-        :param mock_libvirt: The injected mock module.
+        :param mock_virsh: The injected mock runner.
         :param credential: The connection credential.
 
         :returns: A :class:`LibvirtClient`.
     """
-    rtnval = LibvirtClient(credential=credential)
+    rtnval = LibvirtClient(credential=credential, runner=mock_virsh)
     return rtnval
 
 

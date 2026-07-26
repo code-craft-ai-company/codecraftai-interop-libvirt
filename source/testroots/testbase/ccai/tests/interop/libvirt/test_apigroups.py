@@ -252,15 +252,15 @@ def test_delete_unknown_snapshot_is_noop(client, aspects):
     return
 
 
-def test_wait_for_domain_state_reaches_target(client, aspects):
+def test_wait_for_domain_state_reaches_target(client, mock_virsh, aspects):
     """
         wait_for_domain_state returns once the target state is observed.
     """
     spec = _domain_spec("vm-alpha")
     client.domains.define_domain(spec=spec, aspects=aspects)
-    native = client.domains._connection_manager.connection(
-    )._domains["vm-alpha"]
-    native.state_script = [5, 5, 1]
+    mock_virsh.domains["vm-alpha"]["state_script"] = [
+        "shutoff", "shutoff", "running"
+    ]
 
     info = client.domains.wait_for_domain_state(
         name="vm-alpha", desired_state="running", aspects=aspects

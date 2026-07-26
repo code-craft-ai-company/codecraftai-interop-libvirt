@@ -12,6 +12,8 @@ __copyright__ = "Copyright 2026, Code Craft AI LLC"
 __credits__ = []
 
 
+from ccai.interfaces.icommandrunner import ICommandRunner
+
 from ccai.interop.libvirt.aspectslibvirt import (
     AspectsNative, DEFAULT_LIBVIRT_ASPECTS
 )
@@ -37,12 +39,14 @@ class LibvirtClient:
     """
         Typed client for a libvirt-managed hypervisor.
 
-        ``LibvirtClient`` wraps the official ``libvirt-python`` native
-        bindings.  libvirt's wire protocol is a binary RPC, not REST, so
-        this client does **not** derive from ``RestClientBase`` — it is
-        the suite's canonical native-binding client.  The "one transport
-        per package" rule still holds: nothing here speaks HTTP or shells
-        out to a CLI.
+        ``LibvirtClient`` drives the hypervisor through ``virsh``
+        dispatched over an injected :class:`ICommandRunner` — pure Python
+        end to end, with no native bindings.  The runner decides WHERE
+        ``virsh`` executes: a local runner drives a local daemon, an
+        SSH-backed runner drives the daemon on a remote hypervisor host,
+        so nothing libvirt-related needs to be installed where this
+        client runs.  The "one transport per package" rule holds, with
+        ``virsh`` over the runner as the single transport.
 
         The API surface is split into six groups — host, networks,
         storage pools, volumes, domains, and snapshots — each reachable
@@ -51,20 +55,25 @@ class LibvirtClient:
     """
 
     def __init__(self, *,
-                 credential: LibvirtConnectionCredential) -> None:
+                 credential: LibvirtConnectionCredential,
+                 runner: ICommandRunner,
+                 virsh_path: str = "virsh") -> None:
         """
             Construct a LibvirtClient.
 
-            The libvirt connection is opened lazily on first use; merely
-            constructing the client does not require a reachable
-            hypervisor or the native bindings.
+            Merely constructing the client does not require a reachable
+            hypervisor; commands are dispatched per operation.
 
             :param credential: The :class:`LibvirtConnectionCredential`
-                describing the libvirt URI and optional auth callback.
+                describing the libvirt URI.
+            :param runner: The injected command runner ``virsh`` is
+                dispatched through.
+            :param virsh_path: The ``virsh`` executable to invoke.
         """
         self._credential: LibvirtConnectionCredential = credential
         self._connection_manager: LibvirtConnectionManager = (
-            LibvirtConnectionManager(credential=credential)
+            LibvirtConnectionManager(credential=credential, runner=runner,
+                                     virsh_path=virsh_path)
         )
         self._host: HostGroup = HostGroup(
             connection_manager=self._connection_manager

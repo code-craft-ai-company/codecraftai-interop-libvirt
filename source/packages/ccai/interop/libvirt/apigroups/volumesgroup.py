@@ -13,7 +13,7 @@ __credits__ = []
 
 import os
 
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from ccai.interop.libvirt.aspectslibvirt import (
     AspectsNative, DEFAULT_LIBVIRT_ASPECTS
@@ -21,6 +21,9 @@ from ccai.interop.libvirt.aspectslibvirt import (
 from ccai.interop.libvirt.apigroups.retrysupport import run_with_retry
 from ccai.interop.libvirt.connection.libvirtconnectionmanager import (
     LibvirtConnectionManager
+)
+from ccai.interop.libvirt.connection.virshparsers import (
+    parse_key_value_block, parse_memory_kib, parse_volume_table
 )
 from ccai.interop.libvirt.exceptions.libvirtoperationerror import (
     LibvirtOperationError
@@ -34,39 +37,11 @@ from ccai.interop.libvirt.xml.storagepoolxmlcomposer import (
 )
 
 
-def _volume_record(*, native_volume: Any,
-                    pool_name: str) -> LibvirtVolume:
-    """
-        Build a :class:`LibvirtVolume` from a native volume handle.
-
-        :param native_volume: The native libvirt volume object.
-        :param pool_name: The owning pool name.
-
-        :returns: A :class:`LibvirtVolume` record.
-    """
-    capacity = 0
-    allocation = 0
-    try:
-        info = native_volume.info()
-        capacity = int(info[1])
-        allocation = int(info[2])
-    except Exception:
-        capacity = 0
-        allocation = 0
-    rtnval = LibvirtVolume(name=native_volume.name(),
-                           pool_name=pool_name,
-                           path=native_volume.path(),
-                           capacity_bytes=capacity,
-                           allocation_bytes=allocation,
-                           volume_format="qcow2")
-    return rtnval
-
-
 class VolumesGroup:
     """
         Storage-volume operations for :class:`LibvirtClient`.
 
-        ``delete_volume`` is idempotent.
+        ``create_volume`` and ``delete_volume`` are idempotent.
     """
 
     def __init__(self, *,
@@ -82,41 +57,68 @@ class VolumesGroup:
         self._composer: StoragePoolXmlComposer = StoragePoolXmlComposer()
         return
 
-    def _require_pool(self, *, connection: Any, pool_name: str) -> Any:
+    def _require_pool(self, *, pool_name: str,
+                      aspects: AspectsNative) -> None:
         """
-            Look up a storage pool, raising when it is absent.
+            Verify a storage pool exists, raising when it is absent.
 
-            :param connection: The native libvirt connection.
             :param pool_name: The pool name.
-
-            :returns: The native pool handle.
+            :param aspects: The :class:`AspectsNative` carrier.
 
             :raises: :class:`LibvirtOperationError`
         """
-        try:
-            rtnval = connection.storagePoolLookupByName(pool_name)
-        except Exception as xcpt:
+        output = self._connection_manager.probe(
+            args=["pool-info", pool_name], aspects=aspects)
+        if output is None:
             err_msg_lines = ["The named storage pool was not found."]
             err_msg_lines.append("POOL: {}".format(pool_name))
-            err_msg_lines.append("CAUSE: {}".format(xcpt))
             err_msg = os.linesep.join(err_msg_lines)
-            raise LibvirtOperationError(err_msg) from None
+            raise LibvirtOperationError(err_msg)
+        return
+
+    def _find_volume_fields(self, *, pool_name: str, name: str,
+                            aspects: AspectsNative) -> Optional[dict]:
+        """
+            Look up a volume's ``vol-info`` fields, tolerating absence.
+
+            :param pool_name: The owning pool name.
+            :param name: The volume name.
+            :param aspects: The :class:`AspectsNative` carrier.
+
+            :returns: The parsed field dict or ``None``.
+        """
+        output = self._connection_manager.probe(
+            args=["vol-info", "--pool", pool_name, "--bytes", name],
+            aspects=aspects)
+        if output is None:
+            rtnval = None
+            return rtnval
+        rtnval = parse_key_value_block(output)
         return rtnval
 
-    def _find_volume(self, *, pool: Any,
-                     name: str) -> Optional[Any]:
+    def _volume_record(self, *, pool_name: str, name: str, fields: dict,
+                       aspects: AspectsNative) -> LibvirtVolume:
         """
-            Look up a volume within a pool, tolerating absence.
+            Build a :class:`LibvirtVolume` from ``vol-info`` fields.
 
-            :param pool: The native pool handle.
+            :param pool_name: The owning pool name.
             :param name: The volume name.
+            :param fields: The parsed ``vol-info`` field dict.
+            :param aspects: The :class:`AspectsNative` carrier.
 
-            :returns: The native volume handle or ``None``.
+            :returns: A :class:`LibvirtVolume` record.
         """
-        try:
-            rtnval = pool.storageVolLookupByName(name)
-        except Exception:
-            rtnval = None
+        path_output = self._connection_manager.probe(
+            args=["vol-path", "--pool", pool_name, name], aspects=aspects)
+        path = path_output.strip() if path_output is not None else ""
+        rtnval = LibvirtVolume(
+            name=name,
+            pool_name=pool_name,
+            path=path,
+            capacity_bytes=parse_memory_kib(fields.get("Capacity", "0")),
+            allocation_bytes=parse_memory_kib(fields.get("Allocation", "0")),
+            volume_format="qcow2",
+        )
         return rtnval
 
     def list_volumes(self, *, pool_name: str,
@@ -130,15 +132,22 @@ class VolumesGroup:
 
             :returns: A list of :class:`LibvirtVolume` records.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
 
         def _operation() -> List[LibvirtVolume]:
-            pool = self._require_pool(connection=connection,
-                                      pool_name=pool_name)
+            self._require_pool(pool_name=pool_name, aspects=aspects)
+            output = manager.run(args=["vol-list", pool_name],
+                                 aspects=aspects,
+                                 description="list_volumes")
             records: List[LibvirtVolume] = []
-            for native in pool.listAllVolumes():
-                records.append(_volume_record(native_volume=native,
-                                               pool_name=pool_name))
+            for row in parse_volume_table(output):
+                fields = self._find_volume_fields(
+                    pool_name=pool_name, name=row["name"], aspects=aspects)
+                if fields is None:
+                    continue
+                records.append(self._volume_record(
+                    pool_name=pool_name, name=row["name"], fields=fields,
+                    aspects=aspects))
             return records
 
         rtnval = run_with_retry(operation=_operation, aspects=aspects,
@@ -160,20 +169,28 @@ class VolumesGroup:
 
             :returns: A :class:`LibvirtVolume` record.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
         xml_document = self._composer.compose_volume(spec=spec)
 
         def _operation() -> LibvirtVolume:
-            pool = self._require_pool(connection=connection,
-                                      pool_name=pool_name)
-            existing = self._find_volume(pool=pool, name=spec.name)
+            self._require_pool(pool_name=pool_name, aspects=aspects)
+            existing = self._find_volume_fields(
+                pool_name=pool_name, name=spec.name, aspects=aspects)
             if existing is not None:
-                result = _volume_record(native_volume=existing,
-                                        pool_name=pool_name)
+                result = self._volume_record(
+                    pool_name=pool_name, name=spec.name, fields=existing,
+                    aspects=aspects)
                 return result
-            native = pool.createXML(xml_document, 0)
-            result = _volume_record(native_volume=native,
-                                    pool_name=pool_name)
+            manager.run(args=["vol-create", pool_name, "/dev/stdin"],
+                        stdin=xml_document, aspects=aspects,
+                        description="create_volume")
+            fields = self._find_volume_fields(
+                pool_name=pool_name, name=spec.name, aspects=aspects)
+            if fields is None:
+                fields = {}
+            result = self._volume_record(
+                pool_name=pool_name, name=spec.name, fields=fields,
+                aspects=aspects)
             return result
 
         rtnval = run_with_retry(operation=_operation, aspects=aspects,
@@ -194,15 +211,16 @@ class VolumesGroup:
 
             :returns: ``None``.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
 
         def _operation() -> None:
-            pool = self._require_pool(connection=connection,
-                                      pool_name=pool_name)
-            native = self._find_volume(pool=pool, name=name)
-            if native is None:
+            self._require_pool(pool_name=pool_name, aspects=aspects)
+            existing = self._find_volume_fields(
+                pool_name=pool_name, name=name, aspects=aspects)
+            if existing is None:
                 return None
-            native.delete(0)
+            manager.run(args=["vol-delete", "--pool", pool_name, name],
+                        aspects=aspects, description="delete_volume")
             return None
 
         run_with_retry(operation=_operation, aspects=aspects,
@@ -222,23 +240,14 @@ class VolumesGroup:
             :param aspects: The :class:`AspectsNative` carrier.
 
             :returns: ``None``.
-
-            :raises: :class:`LibvirtOperationError` when the volume is
-                absent.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
 
         def _operation() -> None:
-            pool = self._require_pool(connection=connection,
-                                      pool_name=pool_name)
-            native = self._find_volume(pool=pool, name=name)
-            if native is None:
-                err_msg_lines = ["Cannot resize an absent volume."]
-                err_msg_lines.append("POOL: {}".format(pool_name))
-                err_msg_lines.append("VOLUME: {}".format(name))
-                err_msg = os.linesep.join(err_msg_lines)
-                raise LibvirtOperationError(err_msg)
-            native.resize(capacity_bytes, 0)
+            self._require_pool(pool_name=pool_name, aspects=aspects)
+            manager.run(args=["vol-resize", "--pool", pool_name, name,
+                              str(capacity_bytes)],
+                        aspects=aspects, description="resize_volume")
             return None
 
         run_with_retry(operation=_operation, aspects=aspects,

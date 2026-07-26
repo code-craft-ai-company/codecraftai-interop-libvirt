@@ -34,22 +34,18 @@ def _is_transient_libvirt_error(error: BaseException) -> bool:
         Decide whether ``error`` is a transient libvirt failure that the
         aspects retry budget may legitimately retry.
 
-        Only the native libvirt SDK error (class name ``libvirtError``) and
-        :class:`LibvirtConnectionError` qualify. ``SemanticError`` — which
-        must never be caught — and ordinary programming defects such as
-        ``TypeError`` / ``ValueError`` are NOT transient: retrying them
-        wastes the budget and masks the real fault, so they must bubble.
+        Only :class:`LibvirtConnectionError` — the dispatcher's signal
+        that the hypervisor could not be reached — qualifies.
+        ``SemanticError`` — which must never be caught — and ordinary
+        programming defects such as ``TypeError`` / ``ValueError`` are
+        NOT transient: retrying them wastes the budget and masks the real
+        fault, so they must bubble.
 
         :param error: The caught exception instance.
 
         :returns: ``True`` when the error is a transient libvirt failure.
     """
-    if isinstance(error, LibvirtConnectionError) is True:
-        rtnval = True
-        return rtnval
-
-    type_name = type(error).__name__
-    rtnval = type_name == "libvirtError"
+    rtnval = isinstance(error, LibvirtConnectionError) is True
     return rtnval
 
 

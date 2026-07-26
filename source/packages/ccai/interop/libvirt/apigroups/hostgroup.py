@@ -18,6 +18,10 @@ from ccai.interop.libvirt.apigroups.retrysupport import run_with_retry
 from ccai.interop.libvirt.connection.libvirtconnectionmanager import (
     LibvirtConnectionManager
 )
+from ccai.interop.libvirt.connection.virshparsers import (
+    parse_key_value_block, parse_memory_kib, parse_version_field,
+    parse_version_number
+)
 from ccai.interop.libvirt.model.libvirthostinfo import LibvirtHostInfo
 from ccai.interop.libvirt.model.libvirtnodeinfo import LibvirtNodeInfo
 
@@ -48,13 +52,23 @@ class HostGroup:
 
             :returns: A :class:`LibvirtHostInfo` record.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
 
         def _operation() -> LibvirtHostInfo:
-            hostname = connection.getHostname()
-            hypervisor_type = connection.getType()
-            version = connection.getVersion()
-            capabilities = connection.getCapabilities()
+            hostname = manager.run(args=["hostname"], aspects=aspects,
+                                   description="host_info").strip()
+            version_output = manager.run(args=["version"], aspects=aspects,
+                                         description="host_info")
+            hypervisor_line = parse_version_field(
+                version_output, label="Running hypervisor")
+            if len(hypervisor_line) > 0:
+                hypervisor_type = hypervisor_line.split()[0]
+            else:
+                hypervisor_type = "unknown"
+            version = parse_version_number(hypervisor_line)
+            capabilities = manager.run(args=["capabilities"],
+                                       aspects=aspects,
+                                       description="host_info")
             summary = capabilities[:120]
             result = LibvirtHostInfo(hostname=hostname,
                                      hypervisor_type=hypervisor_type,
@@ -75,19 +89,20 @@ class HostGroup:
 
             :returns: A :class:`LibvirtNodeInfo` record.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
 
         def _operation() -> LibvirtNodeInfo:
-            raw = connection.getInfo()
-            model, memory_mib, cpus, _mhz, sockets, cores, _threads, \
-                numa = (raw[0], raw[1], raw[2], raw[3], raw[4], raw[5],
-                        raw[6], raw[7])
-            result = LibvirtNodeInfo(model=str(model),
-                                     memory_kib=int(memory_mib) * 1024,
-                                     cpus=int(cpus),
-                                     cores=int(cores),
-                                     sockets=int(sockets),
-                                     numa_nodes=int(numa))
+            output = manager.run(args=["nodeinfo"], aspects=aspects,
+                                 description="node_info")
+            fields = parse_key_value_block(output)
+            result = LibvirtNodeInfo(
+                model=fields.get("CPU model", "unknown"),
+                memory_kib=parse_memory_kib(fields.get("Memory size", "0")),
+                cpus=int(fields.get("CPU(s)", "0")),
+                cores=int(fields.get("Core(s) per socket", "0")),
+                sockets=int(fields.get("CPU socket(s)", "0")),
+                numa_nodes=int(fields.get("NUMA cell(s)", "0")),
+            )
             return result
 
         rtnval = run_with_retry(operation=_operation, aspects=aspects,
@@ -104,10 +119,11 @@ class HostGroup:
 
             :returns: The capabilities XML string.
         """
-        connection = self._connection_manager.connection(aspects=aspects)
+        manager = self._connection_manager
 
         def _operation() -> str:
-            result = connection.getCapabilities()
+            result = manager.run(args=["capabilities"], aspects=aspects,
+                                 description="capabilities_xml")
             return result
 
         rtnval = run_with_retry(operation=_operation, aspects=aspects,

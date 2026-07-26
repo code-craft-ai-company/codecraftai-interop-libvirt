@@ -32,7 +32,9 @@ from ccai.interop.libvirt.specs.libvirtdomainspec import (
 )
 from ccai.interop.libvirt.xml.domainxmlcomposer import DomainXmlComposer
 
-from ccai.tests.interop.libvirt.mocklibvirt import libvirtError
+from ccai.interop.libvirt.exceptions.libvirtconnectionerror import (
+    LibvirtConnectionError
+)
 
 
 # ----------------------------------------------------------------------
@@ -125,13 +127,13 @@ def test_run_with_retry_lets_type_error_bubble():
     return
 
 
-def test_run_with_retry_retries_transient_libvirt_error():
+def test_run_with_retry_retries_transient_connection_error():
     calls = []
 
     def _operation():
         calls.append(1)
         if len(calls) < 3:
-            raise libvirtError("transient")
+            raise LibvirtConnectionError("transient")
         return "ok"
 
     result = run_with_retry(operation=_operation, aspects=_aspects(),
@@ -143,7 +145,7 @@ def test_run_with_retry_retries_transient_libvirt_error():
 
 def test_run_with_retry_exhausts_budget_on_transient_error():
     def _operation():
-        raise libvirtError("always transient")
+        raise LibvirtConnectionError("always transient")
 
     with pytest.raises(LibvirtOperationError):
         run_with_retry(operation=_operation, aspects=_aspects(),
