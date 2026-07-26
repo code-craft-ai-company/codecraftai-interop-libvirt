@@ -15,8 +15,8 @@ __credits__ = []
 
 from xml.etree import ElementTree
 
-from hypothesis import given, settings
-from hypothesis import strategies as st
+from ccai.testbase.properties import given
+from ccai.testbase.properties import strategies as st
 
 from ccai.interop.libvirt.aspectslibvirt import AspectsNative
 from ccai.interop.libvirt.connection.libvirtconnectioncredential import (
@@ -43,7 +43,6 @@ _HOSTILE_TEXT = st.text(
 
 
 @given(name=_HOSTILE_TEXT, source=_HOSTILE_TEXT)
-@settings(max_examples=120, deadline=None)
 def test_domain_xml_is_always_well_formed(name, source):
     """
         For any hostile name / source-path the composed domain XML is
@@ -60,8 +59,7 @@ def test_domain_xml_is_always_well_formed(name, source):
     return
 
 
-@given(name=_HOSTILE_TEXT)
-@settings(max_examples=60, deadline=None)
+@given(name=_HOSTILE_TEXT, constraints={"max_examples": 120})
 def test_domain_xml_is_deterministic(name):
     """
         The same spec produces byte-identical XML.
@@ -95,8 +93,7 @@ def _fresh_client(module_holder):
     return rtnval
 
 
-@given(repeats=st.integers(min_value=1, max_value=5))
-@settings(max_examples=30, deadline=None)
+@given(repeats=st.integers(min_value=1, max_value=5), constraints={"max_examples": 60})
 def test_define_network_converges(repeats):
     """
         Defining a network N times converges to one network.
@@ -116,8 +113,7 @@ def test_define_network_converges(repeats):
     return
 
 
-@given(repeats=st.integers(min_value=1, max_value=5))
-@settings(max_examples=30, deadline=None)
+@given(repeats=st.integers(min_value=1, max_value=5), constraints={"max_examples": 30})
 def test_attach_disk_converges(repeats):
     """
         Attaching the same disk N times attaches it exactly once.
@@ -140,8 +136,7 @@ def test_attach_disk_converges(repeats):
     return
 
 
-@given(budget=st.integers(min_value=1, max_value=4))
-@settings(max_examples=20, deadline=None)
+@given(budget=st.integers(min_value=1, max_value=4), constraints={"max_examples": 30})
 def test_retry_budget_yields_same_result(budget):
     """
         An idempotent operation returns the same result regardless of
@@ -161,8 +156,7 @@ def test_retry_budget_yields_same_result(budget):
     return
 
 
-@given(prefix_len=st.integers(min_value=0, max_value=6))
-@settings(max_examples=25, deadline=None)
+@given(prefix_len=st.integers(min_value=0, max_value=6), constraints={"max_examples": 20})
 def test_wait_for_domain_state_terminal_correctness(prefix_len):
     """
         For any monotonic mock state stream that eventually reaches the
