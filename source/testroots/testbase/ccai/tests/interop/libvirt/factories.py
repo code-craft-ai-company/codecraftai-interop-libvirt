@@ -1,5 +1,5 @@
 """
-    .. module:: conftest
+    .. module:: factories
     :platform: Darwin, Linux, Unix, Windows
     :synopsis: Shared fixtures for the libvirt interop client tests.
 
@@ -16,7 +16,9 @@ __copyright__ = "Copyright 2026, Code Craft AI LLC"
 __credits__ = []
 
 
-import pytest
+from collections.abc import Generator
+
+from ccai import testbase
 
 from ccai.interop.libvirt.aspectslibvirt import AspectsNative
 from ccai.interop.libvirt.connection.libvirtconnectioncredential import (
@@ -26,32 +28,31 @@ from ccai.interop.libvirt.libvirtclient import LibvirtClient
 
 from ccai.tests.interop.libvirt.mockvirshrunner import MockVirshRunner
 
-
-@pytest.fixture
-def mock_virsh() -> MockVirshRunner:
+@testbase.register.resource_factory()
+def create_libvirt_mock_virsh(constraints=None) -> Generator[MockVirshRunner, None, None]:
     """
         Return a fresh in-memory ``virsh`` emulator.
 
         :returns: The :class:`MockVirshRunner` instance.
     """
     rtnval = MockVirshRunner()
-    return rtnval
+    yield rtnval
 
 
-@pytest.fixture
-def credential() -> LibvirtConnectionCredential:
+@testbase.register.resource_factory()
+def create_libvirt_credential(constraints=None) -> Generator[LibvirtConnectionCredential, None, None]:
     """
         Return a deterministic libvirt connection credential.
 
         :returns: A :class:`LibvirtConnectionCredential`.
     """
     rtnval = LibvirtConnectionCredential(uri="qemu:///system")
-    return rtnval
+    yield rtnval
 
 
-@pytest.fixture
-def client(mock_virsh: MockVirshRunner,
-           credential: LibvirtConnectionCredential) -> LibvirtClient:
+@testbase.register.resource_factory()
+def create_libvirt_client(mock_virsh: MockVirshRunner,
+           credential: LibvirtConnectionCredential, constraints=None) -> Generator[LibvirtClient, None, None]:
     """
         Return a :class:`LibvirtClient` bound to the mock runner.
 
@@ -61,11 +62,11 @@ def client(mock_virsh: MockVirshRunner,
         :returns: A :class:`LibvirtClient`.
     """
     rtnval = LibvirtClient(credential=credential, runner=mock_virsh)
-    return rtnval
+    yield rtnval
 
 
-@pytest.fixture
-def aspects() -> AspectsNative:
+@testbase.register.resource_factory()
+def create_libvirt_aspects(constraints=None) -> Generator[AspectsNative, None, None]:
     """
         Return a fast :class:`AspectsNative` carrier for tests.
 
@@ -75,4 +76,4 @@ def aspects() -> AspectsNative:
                            completion_timeout=0.2,
                            retry_interval=0.01,
                            max_attempts=2)
-    return rtnval
+    yield rtnval

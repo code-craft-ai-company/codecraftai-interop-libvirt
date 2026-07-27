@@ -31,8 +31,12 @@ from ccai.interop.libvirt.specs.libvirtvolumespec import (
     LibvirtVolumeSpec
 )
 
+from ccai.tests.interop.libvirt.factories import (create_libvirt_client, create_libvirt_mock_virsh)
 
-def test_host_info(client, aspects):
+
+@testbase.attach.parameter(create_libvirt_client, identifier="client")
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
+def test_host_info(mock_virsh, client, aspects):
     """
         host_info / node_info / capabilities_xml return populated records.
     """
@@ -48,7 +52,9 @@ def test_host_info(client, aspects):
     return
 
 
-def test_define_network_is_idempotent(client, aspects):
+@testbase.attach.parameter(create_libvirt_client, identifier="client")
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
+def test_define_network_is_idempotent(mock_virsh, client, aspects):
     """
         Defining a network twice yields one network.
     """
@@ -62,7 +68,9 @@ def test_define_network_is_idempotent(client, aspects):
     return
 
 
-def test_network_lifecycle(client, aspects):
+@testbase.attach.parameter(create_libvirt_client, identifier="client")
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
+def test_network_lifecycle(mock_virsh, client, aspects):
     """
         start / stop / undefine drive the network through its states.
     """
@@ -82,7 +90,9 @@ def test_network_lifecycle(client, aspects):
     return
 
 
-def test_undefine_unknown_network_is_noop(client, aspects):
+@testbase.attach.parameter(create_libvirt_client, identifier="client")
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
+def test_undefine_unknown_network_is_noop(mock_virsh, client, aspects):
     """
         Undefining a network that does not exist is a no-op.
     """
@@ -90,7 +100,9 @@ def test_undefine_unknown_network_is_noop(client, aspects):
     return
 
 
-def test_storage_pool_and_volume_lifecycle(client, aspects):
+@testbase.attach.parameter(create_libvirt_client, identifier="client")
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
+def test_storage_pool_and_volume_lifecycle(mock_virsh, client, aspects):
     """
         Define a pool, create volumes, list, resize and delete.
     """
@@ -122,7 +134,9 @@ def test_storage_pool_and_volume_lifecycle(client, aspects):
     return
 
 
-def test_delete_unknown_volume_is_noop(client, aspects):
+@testbase.attach.parameter(create_libvirt_client, identifier="client")
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
+def test_delete_unknown_volume_is_noop(mock_virsh, client, aspects):
     """
         Deleting an absent volume is a no-op.
     """
@@ -145,7 +159,9 @@ def _domain_spec(name: str) -> LibvirtDomainSpec:
     return rtnval
 
 
-def test_define_domain_is_idempotent(client, aspects):
+@testbase.attach.parameter(create_libvirt_client, identifier="client")
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
+def test_define_domain_is_idempotent(mock_virsh, client, aspects):
     """
         Defining a domain twice yields one domain.
     """
@@ -158,7 +174,9 @@ def test_define_domain_is_idempotent(client, aspects):
     return
 
 
-def test_domain_lifecycle(client, aspects):
+@testbase.attach.parameter(create_libvirt_client, identifier="client")
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
+def test_domain_lifecycle(mock_virsh, client, aspects):
     """
         create / shutdown / destroy / undefine drive a domain.
     """
@@ -180,7 +198,9 @@ def test_domain_lifecycle(client, aspects):
     return
 
 
-def test_undefine_unknown_domain_is_noop(client, aspects):
+@testbase.attach.parameter(create_libvirt_client, identifier="client")
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
+def test_undefine_unknown_domain_is_noop(mock_virsh, client, aspects):
     """
         Undefining an absent domain is a no-op.
     """
@@ -188,7 +208,9 @@ def test_undefine_unknown_domain_is_noop(client, aspects):
     return
 
 
-def test_attach_disk_idempotent(client, aspects):
+@testbase.attach.parameter(create_libvirt_client, identifier="client")
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
+def test_attach_disk_idempotent(mock_virsh, client, aspects):
     """
         Attaching the same disk twice attaches it once.
     """
@@ -207,7 +229,9 @@ def test_attach_disk_idempotent(client, aspects):
     return
 
 
-def test_detach_unattached_disk_is_noop(client, aspects):
+@testbase.attach.parameter(create_libvirt_client, identifier="client")
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
+def test_detach_unattached_disk_is_noop(mock_virsh, client, aspects):
     """
         Detaching a disk that is not present is a no-op.
     """
@@ -218,7 +242,9 @@ def test_detach_unattached_disk_is_noop(client, aspects):
     return
 
 
-def test_snapshot_lifecycle(client, aspects):
+@testbase.attach.parameter(create_libvirt_client, identifier="client")
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
+def test_snapshot_lifecycle(mock_virsh, client, aspects):
     """
         create / list / revert / delete snapshots.
     """
@@ -242,7 +268,9 @@ def test_snapshot_lifecycle(client, aspects):
     return
 
 
-def test_delete_unknown_snapshot_is_noop(client, aspects):
+@testbase.attach.parameter(create_libvirt_client, identifier="client")
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
+def test_delete_unknown_snapshot_is_noop(mock_virsh, client, aspects):
     """
         Deleting an absent snapshot is a no-op.
     """
@@ -253,7 +281,9 @@ def test_delete_unknown_snapshot_is_noop(client, aspects):
     return
 
 
-def test_wait_for_domain_state_reaches_target(client, mock_virsh, aspects):
+@testbase.attach.parameter(create_libvirt_client, identifier="client")
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
+def test_wait_for_domain_state_reaches_target(mock_virsh, client, aspects):
     """
         wait_for_domain_state returns once the target state is observed.
     """
@@ -270,7 +300,9 @@ def test_wait_for_domain_state_reaches_target(client, mock_virsh, aspects):
     return
 
 
-def test_wait_for_domain_state_times_out(client, aspects):
+@testbase.attach.parameter(create_libvirt_client, identifier="client")
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
+def test_wait_for_domain_state_times_out(mock_virsh, client, aspects):
     """
         wait_for_domain_state raises TimeoutError when the state never
         converges.

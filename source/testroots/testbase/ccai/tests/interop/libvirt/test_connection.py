@@ -25,7 +25,10 @@ from ccai.interop.libvirt.exceptions.libvirtoperationerror import (
     LibvirtOperationError
 )
 
+from ccai.tests.interop.libvirt.factories import (create_libvirt_client, create_libvirt_mock_virsh)
 
+
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
 def test_commands_carry_the_connection_uri(mock_virsh, credential):
     """
         Every dispatched command addresses the credential's URI via
@@ -44,6 +47,7 @@ def test_commands_carry_the_connection_uri(mock_virsh, credential):
     return
 
 
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
 def test_connection_failure_reclassified(mock_virsh, credential):
     """
         A connection-class failure raises LibvirtConnectionError naming
@@ -59,6 +63,7 @@ def test_connection_failure_reclassified(mock_virsh, credential):
     return
 
 
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
 def test_operation_failure_raises_operation_error(mock_virsh, credential):
     """
         A hypervisor-rejected operation raises LibvirtOperationError,
@@ -73,6 +78,7 @@ def test_operation_failure_raises_operation_error(mock_virsh, credential):
     return
 
 
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
 def test_probe_tolerates_operation_failure(mock_virsh, credential):
     """
         probe() returns None for an operation failure so absence checks
@@ -86,6 +92,7 @@ def test_probe_tolerates_operation_failure(mock_virsh, credential):
     return
 
 
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
 def test_probe_still_raises_on_connection_failure(mock_virsh, credential):
     """
         probe() must never mistake a dead hypervisor for an absent
@@ -100,6 +107,7 @@ def test_probe_still_raises_on_connection_failure(mock_virsh, credential):
     return
 
 
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
 def test_close_rejects_further_operations(mock_virsh, credential):
     """
         After close the manager rejects further operations.
@@ -114,7 +122,9 @@ def test_close_rejects_further_operations(mock_virsh, credential):
     return
 
 
-def test_client_close_is_idempotent(client):
+@testbase.attach.parameter(create_libvirt_client, identifier="client")
+@testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")
+def test_client_close_is_idempotent(mock_virsh, client):
     """
         Closing the client twice is not an error.
     """
