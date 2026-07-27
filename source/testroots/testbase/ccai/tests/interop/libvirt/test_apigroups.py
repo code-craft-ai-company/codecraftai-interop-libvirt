@@ -13,7 +13,8 @@ __copyright__ = "Copyright 2026, Code Craft AI LLC"
 __credits__ = []
 
 
-import pytest
+from ccai import testbase
+
 
 from ccai.interop.libvirt.specs.libvirtdiskspec import LibvirtDiskSpec
 from ccai.interop.libvirt.specs.libvirtdomainspec import (
@@ -277,7 +278,7 @@ def test_wait_for_domain_state_times_out(client, aspects):
     spec = _domain_spec("vm-alpha")
     client.domains.define_domain(spec=spec, aspects=aspects)
 
-    with pytest.raises(TimeoutError):
+    with testbase.raises(TimeoutError):
         client.domains.wait_for_domain_state(
             name="vm-alpha", desired_state="running", aspects=aspects
         )

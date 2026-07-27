@@ -12,7 +12,8 @@ __copyright__ = "Copyright 2026, Code Craft AI LLC"
 __credits__ = []
 
 
-import pytest
+from ccai import testbase
+
 
 from ccai.interop.libvirt.connection.libvirtconnectionmanager import (
     LibvirtConnectionManager
@@ -52,7 +53,7 @@ def test_connection_failure_reclassified(mock_virsh, credential):
     manager = LibvirtConnectionManager(credential=credential,
                                        runner=mock_virsh)
 
-    with pytest.raises(LibvirtConnectionError) as caught:
+    with testbase.raises(LibvirtConnectionError) as caught:
         manager.run(args=["hostname"], description="probe")
     assert "qemu:///system" in str(caught.value)
     return
@@ -66,7 +67,7 @@ def test_operation_failure_raises_operation_error(mock_virsh, credential):
     manager = LibvirtConnectionManager(credential=credential,
                                        runner=mock_virsh)
 
-    with pytest.raises(LibvirtOperationError):
+    with testbase.raises(LibvirtOperationError):
         manager.run(args=["dominfo", "absent-domain"],
                     description="probe")
     return
@@ -94,7 +95,7 @@ def test_probe_still_raises_on_connection_failure(mock_virsh, credential):
     manager = LibvirtConnectionManager(credential=credential,
                                        runner=mock_virsh)
 
-    with pytest.raises(LibvirtConnectionError):
+    with testbase.raises(LibvirtConnectionError):
         manager.probe(args=["dominfo", "absent-domain"])
     return
 
@@ -108,7 +109,7 @@ def test_close_rejects_further_operations(mock_virsh, credential):
     manager.run(args=["hostname"], description="probe")
     manager.close()
 
-    with pytest.raises(LibvirtConnectionError):
+    with testbase.raises(LibvirtConnectionError):
         manager.run(args=["hostname"], description="probe")
     return
 

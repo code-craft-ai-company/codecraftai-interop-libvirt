@@ -13,9 +13,11 @@ __copyright__ = "Copyright 2026, Code Craft AI LLC"
 __credits__ = []
 
 
+from ccai import testbase
+
+
 from xml.etree import ElementTree
 
-import pytest
 
 from ccai.errors.exceptions import SemanticError
 
@@ -61,7 +63,7 @@ def test_metadata_xml_injection_close_tag_is_rejected():
         metadata_xml="</metadata><evil/>",
     )
     composer = DomainXmlComposer()
-    with pytest.raises(LibvirtXmlCompositionError):
+    with testbase.raises(LibvirtXmlCompositionError):
         composer.compose(spec=spec)
     return
 
@@ -72,7 +74,7 @@ def test_metadata_xml_trailing_content_is_rejected():
         metadata_xml="<info/><sneaky/>",
     )
     composer = DomainXmlComposer()
-    with pytest.raises(LibvirtXmlCompositionError):
+    with testbase.raises(LibvirtXmlCompositionError):
         composer.compose(spec=spec)
     return
 
@@ -83,7 +85,7 @@ def test_metadata_xml_malformed_fragment_is_rejected():
         metadata_xml="<unclosed>",
     )
     composer = DomainXmlComposer()
-    with pytest.raises(LibvirtXmlCompositionError):
+    with testbase.raises(LibvirtXmlCompositionError):
         composer.compose(spec=spec)
     return
 
@@ -105,7 +107,7 @@ def test_run_with_retry_lets_semantic_error_bubble():
         calls.append(1)
         raise SemanticError("misused API")
 
-    with pytest.raises(SemanticError):
+    with testbase.raises(SemanticError):
         run_with_retry(operation=_operation, aspects=_aspects(),
                        description="op")
     # SemanticError must bubble on the first attempt without retrying.
@@ -120,7 +122,7 @@ def test_run_with_retry_lets_type_error_bubble():
         calls.append(1)
         raise TypeError("programming defect")
 
-    with pytest.raises(TypeError):
+    with testbase.raises(TypeError):
         run_with_retry(operation=_operation, aspects=_aspects(),
                        description="op")
     assert len(calls) == 1
@@ -147,7 +149,7 @@ def test_run_with_retry_exhausts_budget_on_transient_error():
     def _operation():
         raise LibvirtConnectionError("always transient")
 
-    with pytest.raises(LibvirtOperationError):
+    with testbase.raises(LibvirtOperationError):
         run_with_retry(operation=_operation, aspects=_aspects(),
                        description="op")
     return
