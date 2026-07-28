@@ -14,7 +14,7 @@ that are well design, cohesive, and easy to use and that provide rapid but stabl
 
 # Rules
 - Look in the '<repository>/specs' folder for specification files that help to steer development work
-- Look in the '<repository>/usersguide' folder for files containing standards and conventions
+- Look in the '<repository>/userguide' folder for files containing standards and conventions
 - Look in the '<repository>/prompts' folder for pre-build prompts
 - Files inside the .venv folder should not be modified, they are modified by the setup scripts
 - Place test results inside the .output folder, don't create .output-* directories in the root of the repository
@@ -63,10 +63,10 @@ Property-based tests (hypothesis) are required for domain-XML composition
 operations that are safe to repeat.
 
 # Code Naming Conventions
-The code naming conventions of this repository follows the [Code Craft AI Python Naming Conventions](usersguide/10-02-naming-conventions.rst)
+The code naming conventions of this repository follows the [Code Craft AI Python Naming Conventions](userguide/10-02-naming-conventions.rst)
 
 # Code Structure
-The code structure of this repository follows the [Code Craft AI Python Code Structure Standards](usersguide/10-01-code-organization.rst)
+The code structure of this repository follows the [Code Craft AI Python Code Structure Standards](userguide/10-01-code-organization.rst)
 
 # Coding Standards
 The code in this repository is meant to be utilized by testing tools and test frameworks.  Therefore, the code must prioritize:
@@ -74,7 +74,7 @@ The code in this repository is meant to be utilized by testing tools and test fr
 *  debuggability over performance
 *  readability over conciseness
 
-For all the code in this repository, follow the coding standards specified at [Coding Standards](usersguide/10-00-coding-standards.rst)
+For all the code in this repository, follow the coding standards specified at [Coding Standards](userguide/10-00-coding-standards.rst)
 
 # Environment Setup
 
