@@ -11,7 +11,7 @@
 
 from ccai import testbase
 
-from ccai.tests.interop.libvirt.factories import (
+from .factories import (
     create_libvirt_credential,
     create_libvirt_aspects,
 )

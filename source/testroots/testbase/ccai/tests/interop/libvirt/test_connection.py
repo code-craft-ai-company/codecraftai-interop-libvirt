@@ -25,7 +25,7 @@ from ccai.interop.libvirt.exceptions.libvirtoperationerror import (
     LibvirtOperationError
 )
 
-from ccai.tests.interop.libvirt.factories import (create_libvirt_client, create_libvirt_mock_virsh)
+from .factories import (create_libvirt_client, create_libvirt_mock_virsh)
 
 
 @testbase.attach.parameter(create_libvirt_mock_virsh, identifier="mock_virsh")

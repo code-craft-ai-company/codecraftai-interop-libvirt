@@ -31,7 +31,7 @@ from ccai.interop.libvirt.specs.libvirtvolumespec import (
     LibvirtVolumeSpec
 )
 
-from ccai.tests.interop.libvirt.factories import (create_libvirt_client, create_libvirt_mock_virsh)
+from .factories import (create_libvirt_client, create_libvirt_mock_virsh)
 
 
 @testbase.attach.parameter(create_libvirt_client, identifier="client")

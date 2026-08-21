@@ -82,7 +82,7 @@ def _fresh_client(module_holder):
 
         :returns: A LibvirtClient.
     """
-    from ccai.tests.interop.libvirt.mockvirshrunner import (
+    from .mockvirshrunner import (
         MockVirshRunner
     )
 

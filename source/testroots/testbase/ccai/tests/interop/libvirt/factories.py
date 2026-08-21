@@ -26,7 +26,7 @@ from ccai.interop.libvirt.connection.libvirtconnectioncredential import (
 )
 from ccai.interop.libvirt.libvirtclient import LibvirtClient
 
-from ccai.tests.interop.libvirt.mockvirshrunner import MockVirshRunner
+from .mockvirshrunner import MockVirshRunner
 
 @testbase.register.resource_factory()
 def create_libvirt_mock_virsh(constraints=None) -> Generator[MockVirshRunner, None, None]:
