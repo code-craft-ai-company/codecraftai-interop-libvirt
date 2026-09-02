@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "codecraftai-interop-libvirt"
 description = "Code Craft AI - libvirt/KVM interop client"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Myron Walker <myron.walker@gmail.com>"]
 readme = "README.rst"
 license = "LicenseRef-CodeCraftAI-Dual-License"
@@ -19,8 +19,7 @@ packages = [{include="ccai", from="source/packages"}]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"
-codecraftai-errors = { version = "<2.0.0", source = "codecraftai" }
-codecraftai-interfaces = { version = "<2.0.0", source = "codecraftai" }
+codecraftai-foundations = { version = "<2.0.0", source = "codecraftai" }
 
 [tool.poetry.group.dev.dependencies]
 codecraftai-testbase = { version = "<2.0.0", source = "codecraftai" }
