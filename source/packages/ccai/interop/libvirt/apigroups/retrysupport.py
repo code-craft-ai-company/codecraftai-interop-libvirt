@@ -78,6 +78,10 @@ def run_with_retry(*, operation: Callable[[], Any], aspects: AspectsNative,
         try:
             rtnval = operation()
             return rtnval
+        # A SemanticError means an API has detected it is being used incorrectly.
+        # That is a code defect of compile-time severity: halt and report so it can
+        # be fixed.  It is caught here ONLY to re-raise it past the broad handler
+        # below -- never swallow it, never downgrade it to an Exception subclass.
         except SemanticError:
             raise
         except LibvirtOperationError:
