@@ -19,6 +19,10 @@ dependencies = [
     "codecraftai-foundations<2.0.0",
 ]
 
+[project.urls]
+Repository = "https://github.com/code-craft-ai-company/codecraftai-interop-libvirt"
+Issues = "https://github.com/code-craft-ai-company/codecraftai-interop-libvirt/issues"
+
 [dependency-groups]
 dev = [
     "codecraftai-testbase<2.0.0",
